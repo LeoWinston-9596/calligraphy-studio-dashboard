@@ -61,6 +61,7 @@ backup_mod.BACKUP_DIR = config.BACKUP_DIR
 backup_mod.DB_PATH = config.DB_PATH
 backup_mod.MEDIA_DIR = config.MEDIA_DIR
 
+from app.exporter import cn_date  # noqa: E402
 from app.main import app, init_db  # noqa: E402
 
 PASS, FAIL = [], []
@@ -327,7 +328,7 @@ def main() -> int:
     check("[6] 作品集导出成功", r.status_code == 200 and "<!DOCTYPE html>" in html)
     check("[6] 照片以 data URI 内嵌（离线可看）", "data:image/" in html)
     check("[6] 含评价文字与日期",
-          "第三次修改" in html and yesterday.strftime("%Y年%m月%d日") in html)
+          "第三次修改" in html and cn_date(yesterday) in html)
     check("[6] 含打印样式（打印即 PDF）", "@media print" in html)
     check("[6] 无任何公网资源引用",
           "http://" not in html.replace("http://www.w3.org", "") and "https://" not in html)

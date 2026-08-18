@@ -11,6 +11,18 @@ from .utils import loads_list
 MAX_EMBED_AUDIO = 8 * 1024 * 1024  # 超过 8MB 的语音不内嵌，避免文件过大
 
 
+def cn_date(d) -> str:
+    """把日期写成「2026年8月18日」。
+
+    不能用 strftime('%Y年%m月%d日')：Windows 的 strftime 走 C 运行时，
+    格式串里的中文会按系统代码页编码，直接抛 UnicodeEncodeError，
+    导致导出作品集在 Windows 上必然 500。
+    """
+    if not d:
+        return ""
+    return f"{d.year}年{d.month}月{d.day}日"
+
+
 def _data_uri(rel: str) -> str | None:
     try:
         path = abs_path(rel)
@@ -65,7 +77,7 @@ def build_portfolio_html(student: Student, artworks: list[Artwork]) -> str:
         blocks.append(f"""
     <section class="entry">
       <header>
-        <span class="date">{art.lesson_date.strftime('%Y年%m月%d日') if art.lesson_date else ''}</span>
+        <span class="date">{cn_date(art.lesson_date)}</span>
         <span class="meta">{escape(meta)}</span>
         {rating_html}
       </header>
