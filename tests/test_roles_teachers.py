@@ -145,11 +145,16 @@ def main() -> int:
 
     # ---------------------------------------------- 跟进人按班级多选
     # 挑一个「有班级且有跟进人」的学员，不指定具体是谁
+    # 必须挑「在报读课程表里真实存在」的班级：后面要改写那张表再导入，
+    # 如果挑到前面用例注入的临时班级，改写压根落不到它头上。
+    real_classes = set(pd.read_excel(exports["courses"],
+                                     sheet_name="报读课程")["所在班级"].dropna().astype(str))
     target = None
     listing = admin.get("/api/students", params={"page_size": 200}).json()["items"]
     for item in listing:
         d = admin.get(f"/api/students/{item['id']}").json()
-        rows = [c for c in d["class_teachers"] if c["class_name"] and c["teachers"]]
+        rows = [c for c in d["class_teachers"]
+                if c["class_name"] in real_classes and c["teachers"]]
         if rows:
             target, detail, first_class = item["id"], d, rows[0]["class_name"]
             break
@@ -249,7 +254,9 @@ def main() -> int:
     check("[权限] 教务不能创建校长", r.status_code == 403, r.text[:100])
 
     second = T2 or T1
-    n2 = next(t["class_count"] for t in teachers if t["name"] == second)
+    # 带班数要现取：前面的用例可能已经给这位老师手工加过班，开头缓存的数字会过期
+    n2 = len(admin.get("/api/users/match-teacher",
+                       params={"name": second}).json()["classes"])
     r = jw.post("/api/users", json={"username": "t2", "password": "t2123456",
                                     "name": second, "role_label": "老师"})
     check("[权限] 教务可以创建老师", r.status_code == 200, r.text[:100])
