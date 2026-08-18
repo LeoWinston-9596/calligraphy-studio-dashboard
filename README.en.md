@@ -1,6 +1,27 @@
 # Calligraphy & Art Studio — Local Dashboard
 
+[![tests](https://github.com/LeoWinston-9596/calligraphy-studio-dashboard/actions/workflows/tests.yml/badge.svg)](https://github.com/LeoWinston-9596/calligraphy-studio-dashboard/actions/workflows/tests.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 [简体中文](README.md) · **English**
+
+> **Why** — Teachers at a calligraphy studio track student work and lesson balances from
+> their phones. The spreadsheets exported by the school-management app are unreadable, and
+> because teachers hold classes without deducting lessons, the "remaining lessons" figure
+> drifts high — which quietly breaks every renewal reminder built on it.
+>
+> **Hardest part** — Mobile browsers **withhold microphone access from HTTPS pages whose
+> certificate isn't system-trusted**. Tapping "continue anyway" doesn't help:
+> `navigator.mediaDevices` simply doesn't exist. So the app self-signs a certificate and
+> walks the user through installing it as a trusted root — via a `.mobileconfig` profile on
+> iOS (Safari only; WeChat and Chrome silently cannot), and an entirely different path on
+> Android. Apple additionally rejects certificates valid for more than 825 days or missing
+> the `serverAuth` extension, so a naive 10-year cert installs but still fails.
+>
+> **What I'd change** — Accounts were designed for a single location; multi-branch would
+> need a rework. The follow-up teacher started as a single-value field before I learned a
+> student can have different teachers in different classes — that cost a table migration
+> which asking one more question up front would have avoided.
 
 Turns spreadsheets exported from a school-management app into a searchable dashboard,
 and lets teachers upload student artwork with voice or text feedback from their phones.

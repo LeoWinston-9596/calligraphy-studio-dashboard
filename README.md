@@ -1,6 +1,20 @@
 # 书画室本地看板系统
 
+[![tests](https://github.com/LeoWinston-9596/calligraphy-studio-dashboard/actions/workflows/tests.yml/badge.svg)](https://github.com/LeoWinston-9596/calligraphy-studio-dashboard/actions/workflows/tests.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **简体中文** · [English](README.en.md)
+
+> **为什么做** —— 书画室老师用手机记学员作品和课时，教务 App 导出的 Excel 没人看得懂；
+> 更麻烦的是老师上了课不销课，系统里的"剩余课时"一直偏高，续费提醒等于失灵。
+>
+> **最难的地方** —— 手机浏览器**不给非受信任 HTTPS 页面麦克风权限**。点"继续访问"没用，
+> `navigator.mediaDevices` 根本不存在。所以要自签证书、引导用户装成系统根证书，
+> 而 iOS 走 `.mobileconfig` 描述文件、必须用 Safari，Android 完全是另一套路径。
+> Apple 还额外要求证书有效期 ≤825 天且带 `serverAuth` 扩展，否则装了也不认。
+>
+> **重来会改什么** —— 用户体系当时按单店设计，多店需要重构；跟进人一开始做成了单值字段，
+> 后来发现一个学员在不同班跟不同老师，只能加一张表重做，早点问清楚就不用返工。
 
 把教务 App 导出的 Excel 变成可查询的看板，并支持老师用手机上传学员作品与语音/文字评价。
 **纯局域网运行，零公网依赖**，拔掉外网线一切功能照常。
