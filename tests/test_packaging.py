@@ -71,27 +71,30 @@ def reload_config(frozen: bool, executable: str = "", meipass: str = ""):
 
 
 def main() -> int:
+    # 路径断言一律用 Path 对象比较，不用字符串字面量：Windows 的分隔符是反斜杠，
+    # 且 resolve() 会补上盘符，拿 POSIX 字面量去比会误报失败。
     # ---------------------------------------------- 单文件模式（最危险的情况）
-    exe = "/Applications/书画室看板/书画室看板"
-    mei = "/var/folders/xx/T/_MEI123456"
+    exe = str(Path("/Applications/书画室看板/书画室看板"))
+    mei = str(Path("/var/folders/xx/T/_MEI123456"))
+    exe_dir = Path(exe).resolve().parent
     cfg = reload_config(True, exe, mei)
 
     check("[冻结·单文件] 数据目录在 exe 旁边，不在临时解压目录",
-          str(cfg.DATA_DIR).startswith("/Applications/书画室看板")
-          and "_MEI" not in str(cfg.DATA_DIR), str(cfg.DATA_DIR))
+          cfg.DATA_DIR == exe_dir / "data" and "_MEI" not in str(cfg.DATA_DIR),
+          str(cfg.DATA_DIR))
     check("[冻结·单文件] 数据库不在临时目录（否则重启即丢）",
           "_MEI" not in str(cfg.DB_PATH), str(cfg.DB_PATH))
     check("[冻结·单文件] 备份目录在 exe 旁边",
           "_MEI" not in str(cfg.BACKUP_DIR), str(cfg.BACKUP_DIR))
     check("[冻结·单文件] 前端产物走只读资源目录",
-          str(cfg.WEB_DIST).startswith(mei), str(cfg.WEB_DIST))
+          cfg.WEB_DIST == Path(mei) / "web" / "dist", str(cfg.WEB_DIST))
 
     # ---------------------------------------------- 目录模式
     cfg = reload_config(True, exe)
     check("[冻结·目录] 资源目录 = exe 目录",
-          str(cfg.RESOURCE_DIR) == "/Applications/书画室看板", str(cfg.RESOURCE_DIR))
+          cfg.RESOURCE_DIR == exe_dir, str(cfg.RESOURCE_DIR))
     check("[冻结·目录] 数据目录 = exe 目录/data",
-          str(cfg.DATA_DIR) == "/Applications/书画室看板/data", str(cfg.DATA_DIR))
+          cfg.DATA_DIR == exe_dir / "data", str(cfg.DATA_DIR))
 
     # ---------------------------------------------- macOS .app 包
     # 这条只在 macOS 上有意义：config 里的 .app 特判是按 sys.platform 生效的，
@@ -106,10 +109,11 @@ def main() -> int:
 
     # ---------------------------------------------- 环境变量覆盖
     import os
-    os.environ["SBS_DATA_DIR"] = "/tmp/custom_sbs_data"
+    custom = str(Path("/tmp/custom_sbs_data"))
+    os.environ["SBS_DATA_DIR"] = custom
     cfg = reload_config(True, exe)
     check("[冻结] 可用 SBS_DATA_DIR 把数据目录挪走",
-          str(cfg.DATA_DIR) == "/tmp/custom_sbs_data", str(cfg.DATA_DIR))
+          cfg.DATA_DIR == Path(custom), str(cfg.DATA_DIR))
     del os.environ["SBS_DATA_DIR"]
 
     # ---------------------------------------------- 源码模式不受影响
