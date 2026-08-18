@@ -13,14 +13,29 @@ import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Windows 控制台默认是 GBK 代码页，直接 print 中文会抛 UnicodeEncodeError。
+# 这会让脚本在 Windows 上直接崩掉，所以强制把标准输出切成 UTF-8。
+if sys.platform == "win32":  # pragma: no cover
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
 sys.path.insert(0, str(BASE_DIR))
 
-PASS, FAIL = [], []
+PASS, FAIL, SKIP = [], [], []
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
     (PASS if ok else FAIL).append(name)
     print(f"{'✅' if ok else '❌'} {name}" + (f"  —— {detail}" if detail else ""))
+
+
+def skip(name: str, why: str) -> None:
+    SKIP.append(name)
+    print(f"⏭  {name}  —— {why}")
 
 
 def reload_config(frozen: bool, executable: str = "", meipass: str = ""):
@@ -79,10 +94,15 @@ def main() -> int:
           str(cfg.DATA_DIR) == "/Applications/书画室看板/data", str(cfg.DATA_DIR))
 
     # ---------------------------------------------- macOS .app 包
-    app_exe = "/Applications/书画室看板.app/Contents/MacOS/书画室看板"
-    cfg = reload_config(True, app_exe)
-    check("[冻结·macOS app] 数据不写进 .app 包内部（包内只读）",
-          ".app/Contents" not in str(cfg.DATA_DIR), str(cfg.DATA_DIR))
+    # 这条只在 macOS 上有意义：config 里的 .app 特判是按 sys.platform 生效的，
+    # 在 Linux/Windows 上跑必然不成立，跳过而不是误报失败。
+    if sys.platform == "darwin":
+        app_exe = "/Applications/书画室看板.app/Contents/MacOS/书画室看板"
+        cfg = reload_config(True, app_exe)
+        check("[冻结·macOS app] 数据不写进 .app 包内部（包内只读）",
+              ".app/Contents" not in str(cfg.DATA_DIR), str(cfg.DATA_DIR))
+    else:
+        skip("[冻结·macOS app] 数据不写进 .app 包内部", f"仅 macOS 适用（当前 {sys.platform}）")
 
     # ---------------------------------------------- 环境变量覆盖
     import os
@@ -110,7 +130,8 @@ def main() -> int:
     check("[配置] 没开 UPX（会压坏 onnxruntime）", 'upx=False' in spec)
 
     print("\n" + "=" * 60)
-    print(f"通过 {len(PASS)} 项，失败 {len(FAIL)} 项")
+    print(f"通过 {len(PASS)} 项，失败 {len(FAIL)} 项" +
+          (f"，跳过 {len(SKIP)} 项" if SKIP else ""))
     for n in FAIL:
         print("  -", n)
     print("=" * 60)

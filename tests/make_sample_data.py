@@ -22,6 +22,16 @@ from pathlib import Path
 import pandas as pd
 
 TEACHERS = ["张老师", "李老师", "王老师"]
+
+# Windows 控制台默认是 GBK 代码页，直接 print 中文会抛 UnicodeEncodeError。
+# 这会让脚本在 Windows 上直接崩掉，所以强制把标准输出切成 UTF-8。
+if sys.platform == "win32":  # pragma: no cover
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
 CLASSES = [
     ("周一4:40-6:10书法教室1", "硬笔书法", "书法班"),
     ("周三4:00-5:30书法教室2", "软笔书法", "书法班"),

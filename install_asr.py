@@ -25,6 +25,16 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
+# Windows 控制台默认是 GBK 代码页，直接 print 中文会抛 UnicodeEncodeError。
+# 这会让脚本在 Windows 上直接崩掉，所以强制把标准输出切成 UTF-8。
+if sys.platform == "win32":  # pragma: no cover
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 from app.asr import MODEL_DIR, MODEL_NAME  # noqa: E402
 
 TARGET = MODEL_DIR / MODEL_NAME

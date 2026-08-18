@@ -21,6 +21,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 IS_WINDOWS = sys.platform == "win32"
+
+# Windows 控制台默认是 GBK 代码页，直接 print 中文会抛 UnicodeEncodeError。
+# 这会让脚本在 Windows 上直接崩掉，所以强制把标准输出切成 UTF-8。
+if sys.platform == "win32":  # pragma: no cover
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
 IS_MAC = sys.platform == "darwin"
 APP_NAME = "书画室看板"
 DIST = ROOT / "dist" / APP_NAME

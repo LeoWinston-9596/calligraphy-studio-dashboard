@@ -21,6 +21,16 @@ WEB_DIR = BASE_DIR / "web"
 WEB_DIST = WEB_DIR / "dist"
 IS_WINDOWS = os.name == "nt"
 
+# Windows 控制台默认是 GBK 代码页，直接 print 中文会抛 UnicodeEncodeError。
+# 这会让脚本在 Windows 上直接崩掉，所以强制把标准输出切成 UTF-8。
+if sys.platform == "win32":  # pragma: no cover
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 
 def venv_python() -> Path:
     return VENV_DIR / ("Scripts/python.exe" if IS_WINDOWS else "bin/python")
