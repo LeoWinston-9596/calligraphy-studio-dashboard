@@ -87,7 +87,7 @@ def main() -> int:
     check("[冻结·单文件] 备份目录在 exe 旁边",
           "_MEI" not in str(cfg.BACKUP_DIR), str(cfg.BACKUP_DIR))
     check("[冻结·单文件] 前端产物走只读资源目录",
-          cfg.WEB_DIST == Path(mei) / "web" / "dist", str(cfg.WEB_DIST))
+          cfg.WEB_DIST == Path(mei).resolve() / "web" / "dist", str(cfg.WEB_DIST))
 
     # ---------------------------------------------- 目录模式
     cfg = reload_config(True, exe)

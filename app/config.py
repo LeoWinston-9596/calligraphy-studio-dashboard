@@ -14,8 +14,10 @@ from pathlib import Path
 FROZEN = getattr(sys, "frozen", False)
 
 if FROZEN:
-    # 资源：单文件模式在 sys._MEIPASS，目录模式就在 exe 旁边
-    RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    # 资源：单文件模式在 sys._MEIPASS，目录模式就在 exe 旁边。
+    # 这里要和下面的 BASE_DIR 一样 resolve()：Windows 上不 resolve 会缺盘符，
+    # 两个根目录一个带盘符一个不带，拼出来的路径比较起来就对不上了。
+    RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)).resolve()
     # 数据：永远放 exe 所在目录，跟着程序走，卸载/升级不丢
     _exe_dir = Path(sys.executable).resolve().parent
     if sys.platform == "darwin" and ".app/Contents/MacOS" in str(_exe_dir):
