@@ -79,7 +79,11 @@ class ImportError_(Exception):
 # --------------------------------------------------------------------------
 
 def read_excel(path: Path) -> pd.DataFrame:
-    """读第一个有效 sheet；「学生报读课程」文件含多余的 hidden sheet，只读『报读课程』。"""
+    """读第一个有效 sheet；「学生报读课程」文件含多余的 hidden sheet，只读『报读课程』。
+
+    读完必须显式关闭文件句柄：Windows 不允许删除仍被打开的文件，句柄不放的话
+    导入结束清理临时文件会抛 PermissionError —— 数据其实已经入库了，接口却报 500。
+    """
     suffix = path.suffix.lower()
     engine = "xlrd" if suffix == ".xls" else "openpyxl"
     try:
@@ -87,12 +91,15 @@ def read_excel(path: Path) -> pd.DataFrame:
     except Exception:
         # 有些导出把 .xls 存成 xlsx/html，退一步让 pandas 自己判断
         xl = pd.ExcelFile(path)
-    sheet = xl.sheet_names[0]
-    for name in xl.sheet_names:
-        if str(name).strip() == "报读课程":
-            sheet = name
-            break
-    df = xl.parse(sheet)
+    try:
+        sheet = xl.sheet_names[0]
+        for name in xl.sheet_names:
+            if str(name).strip() == "报读课程":
+                sheet = name
+                break
+        df = xl.parse(sheet)
+    finally:
+        xl.close()
     df.columns = [str(c).strip() for c in df.columns]
     return df
 

@@ -18,6 +18,18 @@ router = APIRouter(prefix="/api/imports", tags=["imports"])
 ALLOWED_SUFFIX = (".xls", ".xlsx")
 
 
+def _cleanup(path) -> None:
+    """删临时文件，删不掉也不能影响接口返回。
+
+    Windows 上文件若仍被占用会抛 PermissionError；导入其实已经成功了，
+    不该因为清理失败就给用户报错，留个残留文件下次覆盖即可。
+    """
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 @router.post("/preview")
 async def preview_file(file: UploadFile = File(...), _: User = Depends(current_user)):
     name = file.filename or "upload.xls"
@@ -29,10 +41,10 @@ async def preview_file(file: UploadFile = File(...), _: User = Depends(current_u
     try:
         result = preview(tmp, name)
     except ImportError_ as e:
-        tmp.unlink(missing_ok=True)
+        _cleanup(tmp)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        tmp.unlink(missing_ok=True)
+        _cleanup(tmp)
         raise HTTPException(status_code=400, detail=f"文件解析失败：{e}")
     result["token"] = token
     result["filename"] = name
@@ -56,7 +68,7 @@ def confirm(token: str = Body(...), filename: str = Body(...), file_type: str = 
         db.rollback()
         raise HTTPException(status_code=400, detail=f"导入失败：{e}")
     finally:
-        tmp.unlink(missing_ok=True)
+        _cleanup(tmp)
     return report
 
 

@@ -182,6 +182,20 @@ def main() -> int:
     check("[1] 重复导入同一文件数据不重复", counts_before == counts_after,
           f"{counts_before} → {counts_after}")
 
+    # 回归：读完 Excel 必须释放文件句柄。Windows 不允许删除仍被打开的文件，
+    # 句柄不放的话导入后清理临时文件会抛 PermissionError —— 数据已入库却报 500。
+    from app.importer import read_excel
+    handle_probe = TMP / "handle_probe.xlsx"
+    shutil.copy(files["courses"], handle_probe)
+    read_excel(handle_probe)
+    try:
+        handle_probe.unlink()
+        released = True
+    except OSError as e:
+        released = False
+        print(f"    句柄未释放：{e}")
+    check("[1] 读完 Excel 释放文件句柄（Windows 上不释放会删不掉临时文件）", released)
+
     # ------------------------------------------- 验收 3：估算口径增减与回退
     meta = client.get("/api/meta").json()
     check("[4.2] 建立了 班级→课程 映射", len(meta["class_course_map"]) > 0,
