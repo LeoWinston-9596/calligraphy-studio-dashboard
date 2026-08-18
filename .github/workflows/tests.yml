@@ -1,0 +1,72 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # 项目要求同时支持 Mac 和 Windows，就得两边都验
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 安装依赖
+        run: |
+          python -m pip install -q --upgrade pip
+          pip install -q -r requirements.txt -r requirements-dev.txt
+
+      - name: 生成合成测试数据
+        # 真实导出表含学员隐私，永不入库；没有数据的话九成用例会跳过，
+        # CI 就变成「绿色但什么都没测」。这里按真实列结构造一份假数据。
+        run: python tests/make_sample_data.py
+
+      - name: 验收标准（规格书 §9）
+        run: python tests/acceptance.py
+
+      - name: 角色权限 + 跟进人按班级匹配
+        run: python tests/test_roles_teachers.py
+
+      - name: 语音转文字与术语纠正
+        # 语音模型 228MB 不进 CI，需要模型的用例会自动跳过，
+        # 术语纠正和降级逻辑照常验证
+        run: python tests/test_asr.py
+
+      - name: 打包路径解析（防数据丢失）
+        run: python tests/test_packaging.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - name: 确认构建产物与仓库内一致
+        # web/dist 是提交进仓库的，改了前端源码却忘记重新构建的话，
+        # 别人 clone 下来跑到的还是旧界面
+        run: |
+          if [ -n "$(git status --porcelain web/dist)" ]; then
+            echo "::error::web/dist 与源码不同步，请在本地执行 cd web && npm run build 后提交"
+            git status --porcelain web/dist
+            exit 1
+          fi
+          echo "web/dist 与源码一致"
